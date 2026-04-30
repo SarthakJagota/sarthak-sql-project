@@ -1,0 +1,22 @@
+# Compiled binary
+sarthak-sql-project
+sarthak-sql-project.exe
+
+# SQLite database (runtime-generated, contains live data)
+*.db
+*.db-shm
+*.db-wal
+
+# Go build cache and test artifacts
+*.test
+*.out
+
+# IDE / editor
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db

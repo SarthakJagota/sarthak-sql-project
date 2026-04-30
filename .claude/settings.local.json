@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build *)",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Go\\\\bin;$env:USERPROFILE\\\\go\\\\bin\"; cd \"c:\\\\Users\\\\sarth\\\\sarthak-sql-project\"; go build ./... 2>&1)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\go\" -ErrorAction SilentlyContinue; Get-ChildItem \"C:\\\\Go\" -ErrorAction SilentlyContinue | Select-Object Name -First 5; Get-ChildItem \"C:\\\\tools\" -ErrorAction SilentlyContinue | Select-Object Name -First 5)"
+    ]
+  }
+}
