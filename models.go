@@ -29,8 +29,10 @@ type Donation struct {
 }
 
 type Inventory struct {
-	BloodType string
-	Units     int
+	BloodType  string
+	DonorName  string
+	Units      int
+	ExpiryDate string
 }
 
 type Request struct {

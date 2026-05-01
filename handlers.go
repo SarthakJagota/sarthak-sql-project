@@ -212,15 +212,25 @@ func (h *handler) addDonation(w http.ResponseWriter, r *http.Request) {
 		h.flash(w, "Donation requires a valid donor with blood type.")
 		return
 	}
-	if _, err = h.db.Exec(
+	tx, err := h.db.Begin()
+	if err != nil {
+		h.flash(w, "Could not add donation.")
+		return
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(
 		"INSERT INTO donations (donor_id, units, donation_date, expiry_date) VALUES (?, ?, ?, ?)",
 		donorID, units, today(), expiry,
 	); err != nil {
 		h.flash(w, "Could not add donation.")
 		return
 	}
-	if err := upsertInventoryByTypeID(h.db, bloodTypeID, units); err != nil {
-		h.flash(w, "Donation saved, but inventory update failed.")
+	if err := upsertInventoryByTypeID(tx, bloodTypeID, units); err != nil {
+		h.flash(w, "Could not add donation.")
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		h.flash(w, "Could not add donation.")
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -247,7 +257,13 @@ func (h *handler) deleteDonation(w http.ResponseWriter, r *http.Request) {
 		h.flash(w, "Donation not found.")
 		return
 	}
-	ok, err := consumeInventoryByTypeID(h.db, bloodTypeID, units)
+	tx, err := h.db.Begin()
+	if err != nil {
+		h.flash(w, "Could not delete donation.")
+		return
+	}
+	defer tx.Rollback()
+	ok, err := consumeInventoryByTypeID(tx, bloodTypeID, units)
 	if err != nil {
 		h.flash(w, "Inventory update failed.")
 		return
@@ -256,7 +272,11 @@ func (h *handler) deleteDonation(w http.ResponseWriter, r *http.Request) {
 		h.flash(w, "Cannot delete donation because inventory is already used.")
 		return
 	}
-	if _, err := h.db.Exec("UPDATE donations SET deleted_at = ? WHERE id = ?", today(), id); err != nil {
+	if _, err := tx.Exec("UPDATE donations SET deleted_at = ? WHERE id = ?", today(), id); err != nil {
+		h.flash(w, "Could not delete donation.")
+		return
+	}
+	if err := tx.Commit(); err != nil {
 		h.flash(w, "Could not delete donation.")
 		return
 	}
@@ -300,6 +320,10 @@ func (h *handler) updateRequest(w http.ResponseWriter, r *http.Request) {
 		h.flash(w, "Request update requires id, units, and status.")
 		return
 	}
+	if status != "Pending" && status != "Fulfilled" && status != "Cancelled" {
+		h.flash(w, "Invalid status value.")
+		return
+	}
 	var oldUnits int
 	var oldStatus string
 	if err := h.db.QueryRow(
@@ -320,7 +344,13 @@ func (h *handler) updateRequest(w http.ResponseWriter, r *http.Request) {
 			h.flash(w, "Request is missing blood type.")
 			return
 		}
-		ok, err := consumeInventoryByTypeID(h.db, bloodTypeID, units)
+		tx, err := h.db.Begin()
+		if err != nil {
+			h.flash(w, "Could not update request.")
+			return
+		}
+		defer tx.Rollback()
+		ok, err := consumeInventoryByTypeID(tx, bloodTypeID, units)
 		if err != nil {
 			h.flash(w, "Inventory update failed.")
 			return
@@ -329,6 +359,18 @@ func (h *handler) updateRequest(w http.ResponseWriter, r *http.Request) {
 			h.flash(w, "Not enough inventory to fulfill request.")
 			return
 		}
+		if _, err := tx.Exec(
+			"UPDATE requests SET units = ?, status = ? WHERE id = ?", units, status, id,
+		); err != nil {
+			h.flash(w, "Could not update request.")
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			h.flash(w, "Could not update request.")
+			return
+		}
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 	if _, err := h.db.Exec(
 		"UPDATE requests SET units = ?, status = ? WHERE id = ?", units, status, id,
@@ -390,7 +432,13 @@ func (h *handler) fulfillRequest(w http.ResponseWriter, r *http.Request) {
 		h.flash(w, "Request not found.")
 		return
 	}
-	ok, err := consumeInventoryByTypeID(h.db, bloodTypeID, units)
+	tx, err := h.db.Begin()
+	if err != nil {
+		h.flash(w, "Could not fulfill request.")
+		return
+	}
+	defer tx.Rollback()
+	ok, err := consumeInventoryByTypeID(tx, bloodTypeID, units)
 	if err != nil {
 		h.flash(w, "Inventory update failed.")
 		return
@@ -399,8 +447,12 @@ func (h *handler) fulfillRequest(w http.ResponseWriter, r *http.Request) {
 		h.flash(w, "Not enough inventory to fulfill request.")
 		return
 	}
-	if _, err := h.db.Exec("UPDATE requests SET status = ? WHERE id = ?", "Fulfilled", id); err != nil {
+	if _, err := tx.Exec("UPDATE requests SET status = ? WHERE id = ?", "Fulfilled", id); err != nil {
 		h.flash(w, "Could not update request.")
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		h.flash(w, "Could not fulfill request.")
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)

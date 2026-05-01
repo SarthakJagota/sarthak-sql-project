@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+// dbIface is satisfied by both *sql.DB and *sql.Tx, enabling transactional helpers.
+type dbIface interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 func initDB(db *sql.DB) error {
 	schemaSQL, err := assets.ReadFile("sql/schema.sql")
 	if err != nil {
@@ -119,7 +125,7 @@ func getRequestBloodTypeID(db *sql.DB, requestID int) (int, error) {
 	return id, nil
 }
 
-func upsertInventoryByTypeID(db *sql.DB, bloodTypeID, units int) error {
+func upsertInventoryByTypeID(db dbIface, bloodTypeID, units int) error {
 	res, err := db.Exec("UPDATE inventory SET units = units + ?, deleted_at = NULL WHERE blood_type_id = ?", units, bloodTypeID)
 	if err != nil {
 		return err
@@ -134,7 +140,7 @@ func upsertInventoryByTypeID(db *sql.DB, bloodTypeID, units int) error {
 	return err
 }
 
-func consumeInventoryByTypeID(db *sql.DB, bloodTypeID, units int) (bool, error) {
+func consumeInventoryByTypeID(db dbIface, bloodTypeID, units int) (bool, error) {
 	var current int
 	err := db.QueryRow("SELECT units FROM inventory WHERE blood_type_id = ? AND deleted_at IS NULL", bloodTypeID).Scan(&current)
 	if err == sql.ErrNoRows {
@@ -173,7 +179,7 @@ func loadPageData(db *sql.DB, msg string) (PageData, error) {
 
 func loadDonors(db *sql.DB) ([]Donor, error) {
 	rows, err := db.Query(`
-		SELECT d.id, d.name, bt.type, d.phone, d.city, d.created_at
+		SELECT d.id, d.name, bt.type, COALESCE(d.phone, ''), COALESCE(d.city, ''), d.created_at
 		FROM donors d
 		JOIN blood_types bt ON bt.id = d.blood_type_id
 		WHERE d.deleted_at IS NULL
@@ -196,7 +202,7 @@ func loadDonors(db *sql.DB) ([]Donor, error) {
 
 func loadRecipients(db *sql.DB) ([]Recipient, error) {
 	rows, err := db.Query(`
-		SELECT r.id, r.name, bt.type, r.phone, r.hospital, r.created_at
+		SELECT r.id, r.name, bt.type, COALESCE(r.phone, ''), COALESCE(r.hospital, ''), r.created_at
 		FROM recipients r
 		JOIN blood_types bt ON bt.id = r.blood_type_id
 		WHERE r.deleted_at IS NULL
@@ -243,11 +249,12 @@ func loadDonations(db *sql.DB) ([]Donation, error) {
 
 func loadInventory(db *sql.DB) ([]Inventory, error) {
 	rows, err := db.Query(`
-		SELECT bt.type, i.units
-		FROM inventory i
-		JOIN blood_types bt ON bt.id = i.blood_type_id
-		WHERE i.deleted_at IS NULL
-		ORDER BY bt.type
+		SELECT bt.type, d.name, don.units, don.expiry_date
+		FROM donations don
+		JOIN donors d ON d.id = don.donor_id
+		JOIN blood_types bt ON bt.id = d.blood_type_id
+		WHERE don.deleted_at IS NULL
+		ORDER BY don.expiry_date ASC, bt.type
 	`)
 	if err != nil {
 		return nil, err
@@ -256,7 +263,7 @@ func loadInventory(db *sql.DB) ([]Inventory, error) {
 	var inv []Inventory
 	for rows.Next() {
 		var i Inventory
-		if err := rows.Scan(&i.BloodType, &i.Units); err != nil {
+		if err := rows.Scan(&i.BloodType, &i.DonorName, &i.Units, &i.ExpiryDate); err != nil {
 			return nil, err
 		}
 		inv = append(inv, i)

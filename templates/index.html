@@ -108,19 +108,23 @@
         <thead>
           <tr>
             <th>Blood Type</th>
+            <th>Donor</th>
             <th>Units</th>
+            <th>Expires</th>
           </tr>
         </thead>
         <tbody>
           {{range .Inventory}}
           <tr>
             <td>{{.BloodType}}</td>
+            <td>{{.DonorName}}</td>
             <td>{{.Units}}</td>
+            <td>{{.ExpiryDate}}</td>
           </tr>
           {{end}}
           {{if not .Inventory}}
           <tr>
-            <td colspan="2">No inventory yet.</td>
+            <td colspan="4">No inventory yet.</td>
           </tr>
           {{end}}
         </tbody>

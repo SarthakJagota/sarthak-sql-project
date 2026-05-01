@@ -20,3 +20,19 @@ sarthak-sql-project.exe
 # OS
 .DS_Store
 Thumbs.db
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Claude / AI tools
+.claude/
+.gemini/
+
+# Temporary / Scratch files created during generation
+scratch_pdf.py
+sachindbms.txt
+guide.txt
+__pycache__/
+*.pyc

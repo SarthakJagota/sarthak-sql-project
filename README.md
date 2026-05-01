@@ -124,7 +124,8 @@ sarthak-sql-project/
 ├── go.sum                   # Dependency lock file
 ├── bloodbank.db             # SQLite database (auto-created at runtime, gitignored)
 ├── sql/
-│   └── schema.sql           # DDL — CREATE TABLE statements for all 6 tables
+│   ├── schema.sql           # DDL — CREATE TABLE statements for all 6 tables
+│   └── plsql_implementation.sql # PL/SQL scripts for advanced logic (triggers, procs)
 ├── templates/
 │   └── index.html           # Single-page HTML template (forms + tables)
 ├── static/
@@ -236,3 +237,6 @@ The `//go:embed` directive bundles `templates/`, `static/`, and `sql/` into the 
 
 **Foreign Key Enforcement**  
 SQLite foreign keys are disabled by default. The application explicitly runs `PRAGMA foreign_keys = ON` for every new connection to enforce referential integrity.
+
+**PL/SQL Implementations**  
+While the backend uses Go and SQLite, academic PL/SQL implementations of core features (like a trigger to auto-update inventory on donation, or a stored procedure to fulfill blood requests) are available in `sql/plsql_implementation.sql` to demonstrate advanced DBMS concepts.
