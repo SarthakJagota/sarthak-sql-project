@@ -422,14 +422,19 @@ func (h *handler) fulfillRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var units, bloodTypeID int
+	var status string
 	err := h.db.QueryRow(`
-		SELECT recipients.blood_type_id, r.units
+		SELECT recipients.blood_type_id, r.units, r.status
 		FROM requests r
 		JOIN recipients ON recipients.id = r.recipient_id
-		WHERE r.id = ?
-	`, id).Scan(&bloodTypeID, &units)
+		WHERE r.id = ? AND r.deleted_at IS NULL
+	`, id).Scan(&bloodTypeID, &units, &status)
 	if err != nil {
 		h.flash(w, "Request not found.")
+		return
+	}
+	if status != "Pending" {
+		h.flash(w, "Only pending requests can be fulfilled.")
 		return
 	}
 	tx, err := h.db.Begin()

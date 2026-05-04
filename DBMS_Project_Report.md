@@ -1,150 +1,5 @@
-# DBMS Project Report: Blood Bank Management System
+PRAGMA foreign_keys = ON;
 
-## 1. Title Page
-- **Project Title:** Blood Bank Management System
-- **Course Name & Code:** UCS310 – Database Management Systems
-- **Degree & Year:** B.Tech (2nd Year)
-- **Department / Institute Name:** [To Be Filled] / [To Be Filled]
-- **Group Members:** 
-  1. [Name 1] (Roll No: [Roll 1])
-  2. [Name 2] (Roll No: [Roll 2])
-  3. [Name 3] (Roll No: [Roll 3])
-- **Lab Instructor Name:** [To Be Filled]
-- **Academic Year:** 2025–26
-
----
-
-## 2. Introduction
-The Blood Bank Management System is a database-driven web application designed to manage blood donors, recipients, blood requests, and inventory efficiently. The system stores and manages donor and recipient records, donation logs, request status, and blood stock information in real-time.
-
-Traditionally, many blood banks manage donor records and requests manually or using basic spreadsheets. This file-based approach suffers from data redundancy, inconsistency, delayed updates, and lack of security. A Database Management System (DBMS) resolves these issues by providing structured data storage, integrity constraints (like preventing invalid blood types), and efficient query processing. 
-
-This project emphasizes backend implementation using SQL and relational database concepts, utilizing SQLite as the primary database, alongside advanced PL/SQL implementations for academic demonstration.
-
----
-
-## 3. Problem Statement
-In many hospitals and blood banks, operations such as tracking donations and fulfilling blood requests are handled manually. This leads to:
-- Duplicate or outdated donor/recipient records
-- Inaccurate inventory and expiry tracking
-- Difficulty in matching blood requests to available stock in emergency situations
-- Slow data retrieval and reporting
-- Lack of data integrity and audit trails
-
-The proposed Blood Bank Management System provides a structured relational database solution to manage donors, donations, requests, and inventory efficiently, ensuring reliable and secure operations.
-
----
-
-## 4. Objectives of the Project
-- To design a database using an Entity-Relationship (E-R) data model.
-- To convert the ER model into relational tables with strict foreign key relationships.
-- To apply normalization (up to 3NF) to eliminate data redundancy.
-- To implement the database using standard SQL (DDL and DML commands).
-- To demonstrate advanced PL/SQL constructs like stored procedures, functions, triggers, and cursors.
-- To ensure data consistency using constraints, soft deletes, and transactions (ACID properties).
-
----
-
-## 5. Scope of the Project
-**Functional Boundaries:** The system manages the complete lifecycle of a blood unit, from donor registration and donation recording to recipient registration, request tracking, and inventory fulfillment.
-**Types of Users involved:** 
-- Admin/Staff (Hospital or Blood Bank personnel)
-**Modules Covered:**
-- Donor Registration Module
-- Recipient Registration Module
-- Donation Recording Module
-- Blood Request Module
-- Real-time Inventory Tracking Module
-
----
-
-## 6. Proposed System Description
-The system is developed using Go (Golang) for backend logic, SQLite for the database, and HTML/CSS for the frontend interface.
-
-**Working of the System:**
-1. Admin/staff registers donors and recipients (recording blood types, contact info, etc.).
-2. Donations are recorded, capturing the donated units and expiry date, and are linked to the respective donor.
-3. Inventory is updated automatically based on the newly recorded donations.
-4. Blood requests are created by recipients and tracked by status (Pending, Fulfilled, Cancelled).
-5. When a request is fulfilled, the required units are dynamically deducted from the inventory.
-6. The system uses "soft deletes" (marking a `deleted_at` timestamp) instead of hard deletes to maintain a complete historical audit trail.
-
-This system greatly improves operational efficiency, data consistency, and traceability of all blood units.
-
----
-
-## 7. Database Design
-
-### 7.1 Entity–Relationship (ER) Diagram
-**Identified Entities:**
-1. `Donor`
-2. `Donation`
-3. `Recipient`
-4. `Request`
-5. `Inventory`
-6. `BloodType` (Lookup table)
-
-**Relationships:**
-- A `Donor` submits one or more `Donation`s (1-M).
-- A `Recipient` makes one or more `Request`s (1-M).
-- `Inventory` summarizes stock for exactly one `BloodType` (1-1).
-- `BloodType` is referenced by `Donor`, `Recipient`, and `Inventory` to maintain consistency.
-
-*(Note: ER diagram image `sarthak 3nf.png` is available in the project repository and should be attached here in the final print).*
-
-### 7.2 Relational Schema
-**BLOOD_TYPES**
-`id` (PK), `type` (UNIQUE)
-
-**DONORS**
-`id` (PK), `name`, `blood_type_id` (FK), `phone`, `city`, `created_at`, `deleted_at`
-
-**RECIPIENTS**
-`id` (PK), `name`, `blood_type_id` (FK), `phone`, `hospital`, `created_at`, `deleted_at`
-
-**DONATIONS**
-`id` (PK), `donor_id` (FK), `units`, `donation_date`, `expiry_date`, `deleted_at`
-
-**REQUESTS**
-`id` (PK), `recipient_id` (FK), `units`, `status`, `request_date`, `deleted_at`
-
-**INVENTORY**
-`id` (PK), `blood_type_id` (FK, UNIQUE), `units`, `deleted_at`
-
----
-
-## 8. Normalization
-
-**Functional Dependencies:**
-- `Donors:` id → name, blood_type_id, phone, city, created_at
-- `BloodTypes:` id → type
-- `Donations:` id → donor_id, units, donation_date, expiry_date
-- `Recipients:` id → name, blood_type_id, phone, hospital, created_at
-- `Requests:` id → recipient_id, units, status, request_date
-- `Inventory:` blood_type_id → units
-
-**1NF (First Normal Form)**
-- All attributes are atomic (single-valued).
-- Each table has a primary key and no repeating groups.
-
-**2NF (Second Normal Form)**
-- All tables use single-column primary keys, ensuring no partial dependency exists.
-- Every non-key attribute depends fully on its table's primary key.
-
-**3NF (Third Normal Form)**
-- Blood type values are stored once in the `BLOOD_TYPES` lookup table and referenced via foreign keys (`blood_type_id`).
-- Redundant blood type text fields in donations, requests, and inventory tables are removed.
-- All non-key attributes depend only on the primary key, eliminating transitive dependencies.
-
-**Conclusion:** The database is successfully normalized up to 3NF.
-
----
-
-## 9. Database Implementation
-
-### 9.1 SQL Implementation
-**DDL Commands (Table Creation):**
-```sql
 CREATE TABLE IF NOT EXISTS blood_types (
 	id   INTEGER PRIMARY KEY AUTOINCREMENT,
 	type TEXT NOT NULL UNIQUE
@@ -154,6 +9,21 @@ CREATE TABLE IF NOT EXISTS donors (
 	id            INTEGER PRIMARY KEY AUTOINCREMENT,
 	name          TEXT NOT NULL,
 	blood_type_id INTEGER NOT NULL,
+	phone         TEXT,
+	city          TEXT,
+	created_at    TEXT NOT NULL,
+	deleted_at    TEXT,
+	FOREIGN KEY(blood_type_id) REFERENCES blood_types(id)
+);
+
+CREATE TABLE IF NOT EXISTS recipients (
+	id            INTEGER PRIMARY KEY AUTOINCREMENT,
+	name          TEXT NOT NULL,
+	blood_type_id INTEGER NOT NULL,
+	phone         TEXT,
+	hospital      TEXT,
+	created_at    TEXT NOT NULL,
+	deleted_at    TEXT,
 	FOREIGN KEY(blood_type_id) REFERENCES blood_types(id)
 );
 
@@ -162,62 +32,208 @@ CREATE TABLE IF NOT EXISTS donations (
 	donor_id      INTEGER NOT NULL,
 	units         INTEGER NOT NULL,
 	donation_date TEXT NOT NULL,
+	expiry_date   TEXT NOT NULL,
+	deleted_at    TEXT,
 	FOREIGN KEY(donor_id) REFERENCES donors(id)
 );
-```
 
-**DML Commands (Insert, Update, Select):**
-```sql
--- INSERT Example
-INSERT INTO requests (recipient_id, units, status, request_date) 
-VALUES (1, 2, 'Pending', '2026-05-01');
+CREATE TABLE IF NOT EXISTS inventory (
+	id            INTEGER PRIMARY KEY AUTOINCREMENT,
+	blood_type_id INTEGER NOT NULL UNIQUE,
+	units         INTEGER NOT NULL,
+	deleted_at    TEXT,
+	FOREIGN KEY(blood_type_id) REFERENCES blood_types(id)
+);
 
--- UPDATE Example (Soft Delete)
-UPDATE donors SET deleted_at = '2026-05-01' WHERE id = 5;
+CREATE TABLE IF NOT EXISTS requests (
+	id           INTEGER PRIMARY KEY AUTOINCREMENT,
+	recipient_id INTEGER NOT NULL,
+	units        INTEGER NOT NULL,
+	status       TEXT NOT NULL,
+	request_date TEXT NOT NULL,
+	deleted_at   TEXT,
+	FOREIGN KEY(recipient_id) REFERENCES recipients(id)
+);
+-- ==============================================================================
+-- Blood Bank Management System - PL/SQL Implementations
+-- ==============================================================================
+-- Note: This file demonstrates how the core business logic of the system 
+-- would be implemented using Oracle PL/SQL (Stored Procedures, Triggers, 
+-- Functions, and Cursors). The actual application uses Go and SQLite, 
+-- but these scripts fulfill DBMS project requirements for PL/SQL implementation.
+-- ==============================================================================
 
--- SELECT Query with JOIN Example
-SELECT d.id, d.name, bt.type, d.phone 
-FROM donors d 
-JOIN blood_types bt ON d.blood_type_id = bt.id 
-WHERE d.deleted_at IS NULL;
-```
+SET SERVEROUTPUT ON;
 
-### 9.2 PL/SQL Components
-While the production application utilizes Go for backend logic, the following PL/SQL components have been implemented (available in `sql/plsql_implementation.sql`) to demonstrate advanced DBMS functionalities:
+-- ------------------------------------------------------------------------------
+-- 1. TRIGGER: Auto-Update Inventory on New Donation
+-- ------------------------------------------------------------------------------
+-- Automatically increases the inventory units for the corresponding blood type
+-- whenever a new donation is successfully recorded in the 'donations' table.
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER trg_after_donation_insert
+AFTER INSERT ON donations
+FOR EACH ROW
+DECLARE
+    v_blood_type_id donors.blood_type_id%TYPE;
+    v_inventory_count NUMBER;
+BEGIN
+    -- Get the blood type of the donor
+    SELECT blood_type_id INTO v_blood_type_id
+    FROM donors
+    WHERE id = :NEW.donor_id;
 
-- **Triggers:** `trg_after_donation_insert` automatically updates the `inventory` table whenever a new row is added to the `donations` table.
-- **Stored Procedures:** `fulfill_blood_request` encapsulates the logic of checking inventory stock, deducting units, and updating the request status to 'Fulfilled', raising exceptions if stock is insufficient.
-- **Functions:** `get_inventory_level` returns the available stock as a number for a given blood type string (e.g., 'O+').
-- **Cursors:** `print_pending_requests` uses a cursor to iterate over a multi-table JOIN result of all 'Pending' requests to generate a formatted report.
+    -- Check if an inventory record already exists for this blood type
+    SELECT COUNT(*) INTO v_inventory_count
+    FROM inventory
+    WHERE blood_type_id = v_blood_type_id;
 
----
+    IF v_inventory_count > 0 THEN
+        -- Update existing inventory
+        UPDATE inventory
+        SET units = units + :NEW.units
+        WHERE blood_type_id = v_blood_type_id;
+    ELSE
+        -- Insert new inventory record
+        INSERT INTO inventory (blood_type_id, units)
+        VALUES (v_blood_type_id, :NEW.units);
+    END IF;
+    
+    DBMS_OUTPUT.PUT_LINE('Inventory updated successfully for donation.');
+END;
+/
 
-## 10. Transaction Management & Concurrency
-The system heavily utilizes Database Transactions to maintain ACID properties (Atomicity, Consistency, Isolation, Durability), particularly during complex operations like fulfilling a blood request or recording a donation.
+-- ------------------------------------------------------------------------------
+-- 2. PROCEDURE: Fulfill Blood Request
+-- ------------------------------------------------------------------------------
+-- Takes a request ID, checks if there is sufficient stock in the inventory.
+-- If stock is sufficient, deducts the requested units and marks the request 
+-- as 'Fulfilled'. If insufficient, it raises an application error to rollback.
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE fulfill_blood_request (
+    p_request_id IN requests.id%TYPE
+)
+IS
+    v_recipient_id requests.recipient_id%TYPE;
+    v_requested_units requests.units%TYPE;
+    v_status requests.status%TYPE;
+    v_blood_type_id recipients.blood_type_id%TYPE;
+    v_available_units inventory.units%TYPE;
+BEGIN
+    -- Fetch request details
+    SELECT recipient_id, units, status 
+    INTO v_recipient_id, v_requested_units, v_status
+    FROM requests 
+    WHERE id = p_request_id AND deleted_at IS NULL;
 
-**Implementation Example:**
-When fulfilling a request, the system must (1) deduct units from inventory, and (2) update the request status. 
-```go
-tx, err := db.Begin()
-// ... Deduct inventory ...
-// ... Update request status ...
-tx.Commit() // Persist changes if both succeed
-// tx.Rollback() is called if any error occurs to prevent partial updates.
-```
-This ensures that if the system crashes midway, blood inventory is never deducted without the request also being marked as fulfilled.
+    -- Ensure request is not already fulfilled or cancelled
+    IF v_status != 'Pending' THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Request is already fulfilled or cancelled.');
+    END IF;
 
----
+    -- Get recipient's blood type
+    SELECT blood_type_id INTO v_blood_type_id
+    FROM recipients
+    WHERE id = v_recipient_id;
 
-## 11. Tools & Technologies Used
-- **DBMS Software:** SQLite 3 (with standard SQL logic easily portable to Oracle/PostgreSQL)
-- **Programming Languages:** Go (Golang) 1.22, SQL, PL/SQL
-- **Frontend:** HTML5, CSS3 (Vanilla), JavaScript
+    -- Check available inventory (handle case where no inventory row exists yet)
+    BEGIN
+        SELECT units INTO v_available_units
+        FROM inventory
+        WHERE blood_type_id = v_blood_type_id AND deleted_at IS NULL;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_available_units := 0;
+    END;
 
----
+    -- Fulfill if sufficient stock exists
+    IF v_available_units >= v_requested_units THEN
+        -- Deduct from inventory
+        UPDATE inventory
+        SET units = units - v_requested_units
+        WHERE blood_type_id = v_blood_type_id;
 
-## 12. Expected Outcomes
-- Successful creation of a fully functional, normalized database for a blood bank.
-- Efficient data retrieval and management using SQL joins and queries.
-- Automation of inventory updates using database triggers and transactions.
-- Zero data loss through the implementation of soft deletes.
-- High data consistency and integrity through the enforcement of foreign key constraints and 3NF normalization.
+        -- Update request status
+        UPDATE requests
+        SET status = 'Fulfilled'
+        WHERE id = p_request_id;
+
+        COMMIT;
+        DBMS_OUTPUT.PUT_LINE('Request fulfilled successfully.');
+    ELSE
+        RAISE_APPLICATION_ERROR(-20002, 'Insufficient blood inventory to fulfill this request.');
+    END IF;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20003, 'Request ID not found or is deleted.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END fulfill_blood_request;
+/
+
+-- ------------------------------------------------------------------------------
+-- 3. PROCEDURE WITH CURSOR: Generate Pending Requests Report
+-- ------------------------------------------------------------------------------
+-- Uses a cursor to iterate through all 'Pending' blood requests and prints
+-- a formatted report joining across multiple tables.
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE print_pending_requests
+IS
+    -- Define the cursor to fetch pending requests
+    CURSOR c_pending IS
+        SELECT r.id, rec.name AS recipient_name, bt.type AS blood_type, r.units, r.request_date
+        FROM requests r
+        JOIN recipients rec ON r.recipient_id = rec.id
+        JOIN blood_types bt ON rec.blood_type_id = bt.id
+        WHERE r.status = 'Pending' AND r.deleted_at IS NULL;
+        
+    v_count NUMBER := 0;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    DBMS_OUTPUT.PUT_LINE('           PENDING BLOOD REQUESTS REPORT          ');
+    DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    
+    -- Iterate through the cursor
+    FOR req IN c_pending LOOP
+        DBMS_OUTPUT.PUT_LINE('Req ID: ' || req.id || 
+                             ' | Recipient: ' || RPAD(req.recipient_name, 20) || 
+                             ' | Type: ' || RPAD(req.blood_type, 3) || 
+                             ' | Units: ' || req.units || 
+                             ' | Date: ' || req.request_date);
+        v_count := v_count + 1;
+    END LOOP;
+    
+    DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    IF v_count = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('No pending requests found.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Total Pending Requests: ' || v_count);
+    END IF;
+END print_pending_requests;
+/
+
+-- ------------------------------------------------------------------------------
+-- 4. FUNCTION: Get Current Inventory Level
+-- ------------------------------------------------------------------------------
+-- Returns the total units available for a specific blood type string (e.g., 'O+').
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION get_inventory_level (
+    p_blood_type IN blood_types.type%TYPE
+) RETURN NUMBER
+IS
+    v_units NUMBER;
+BEGIN
+    SELECT COALESCE(i.units, 0) INTO v_units
+    FROM blood_types bt
+    LEFT JOIN inventory i ON bt.id = i.blood_type_id
+    WHERE bt.type = p_blood_type
+      AND i.deleted_at IS NULL;
+      
+    RETURN v_units;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+END get_inventory_level;
+/

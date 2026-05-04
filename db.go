@@ -249,12 +249,18 @@ func loadDonations(db *sql.DB) ([]Donation, error) {
 
 func loadInventory(db *sql.DB) ([]Inventory, error) {
 	rows, err := db.Query(`
-		SELECT bt.type, d.name, don.units, don.expiry_date
-		FROM donations don
-		JOIN donors d ON d.id = don.donor_id
-		JOIN blood_types bt ON bt.id = d.blood_type_id
-		WHERE don.deleted_at IS NULL
-		ORDER BY don.expiry_date ASC, bt.type
+		SELECT bt.type, COALESCE(earliest.name, ''), i.units, COALESCE(earliest.expiry_date, '')
+		FROM inventory i
+		JOIN blood_types bt ON bt.id = i.blood_type_id
+		LEFT JOIN (
+			SELECT dn.blood_type_id, dn.name, d.expiry_date,
+			       ROW_NUMBER() OVER (PARTITION BY dn.blood_type_id ORDER BY d.expiry_date ASC) AS rn
+			FROM donations d
+			JOIN donors dn ON dn.id = d.donor_id
+			WHERE d.deleted_at IS NULL
+		) earliest ON earliest.blood_type_id = i.blood_type_id AND earliest.rn = 1
+		WHERE i.deleted_at IS NULL
+		ORDER BY bt.type
 	`)
 	if err != nil {
 		return nil, err
