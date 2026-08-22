@@ -1,4 +1,4 @@
-## Blood Bank Management System
+# Blood Bank Management System
 
 A full-stack Blood Bank Management System built with **Go**, **SQLite**, and a plain HTML/CSS frontend. Developed as a DBMS course project (UCS310) demonstrating relational database design, normalization (1NF → 3NF), and a complete web application workflow.
 
